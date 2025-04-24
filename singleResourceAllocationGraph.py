@@ -29,21 +29,43 @@ class ResourceAllocationGraph:
         # add to statement list
         self.statementsList.append(statement)
         
-    def setupDeadlockScenario(self):
-        # deadlock scenario
-        self.numberProcesses = 3
-        self.numberResources = 3
-        self.statementsList = [
-            "P0 requests R0",
-            "P0 holds R0",
-            "P1 requests R1",
-            "P1 holds R1",
-            "P2 requests R2",
-            "P2 holds R2",
-            "P0 requests R1",
-            "P1 requests R2",
-            "P2 requests R0"
-        ]
+    def scenarios(self, scenarioType):
+        if scenarioType == "deadlock":
+            # deadlock scenario
+            self.numberProcesses = 3
+            self.numberResources = 3
+            self.statementsList = [
+                "P0 requests R0",
+                "P0 holds R0",
+                "P1 requests R1",
+                "P1 holds R1",
+                "P2 requests R2",
+                "P2 holds R2",
+                "P0 requests R1",
+                "P1 requests R2",
+                "P2 requests R0"
+            ]
+        elif scenarioType == "noDeadlock":
+            # no deadlock scenario
+            self.numberProcesses = 3
+            self.numberResources = 3
+            self.statementsList = [
+                "P0 requests R0",
+                "P0 holds R0",
+                "P1 requests R1",
+                "P1 holds R1",
+                "P2 requests R2",
+                "P2 holds R2",
+                "P0 requests R1",  # P0 wants R1 (which P1 holds)
+                "P1 releases R1",  # P1 releases R1 so P0 can get it
+                "P0 holds R1",     # P0 gets R1
+                "P1 requests R2",  # P1 wants R2 (which P2 holds)
+                "P2 releases R2",  # P2 releases R2 so P1 can get it
+                "P1 holds R2",     # P1 gets R2
+                "P2 requests R0",  # P2 wants R0 (which P0 holds)
+                "P0 releases R0",  # P0 releases R0 so P2 can get it
+                "P2 holds R0"      # P2 gets R0
+            ]
             
         # reset matrices and edges 
         self.matrixAlloc = np.zeros((self.numberProcesses, self.numberResources), dtype=int)
@@ -244,13 +266,12 @@ class ResourceAllocationGraph:
         if self.deadlockedProcesses:
             plt.title(f"Single Instance Resource Allocation Graph (Deadlock Detected):\n {', '.join(f'P{i}' for i in self.deadlockedProcesses)}", fontsize = 12)
         else:
-            plt.title("Single Instance Resource Allocation Graph", fontsize = 12)
+            plt.title("Single Instance Resource Allocation Graph (No Deadlock Detected)", fontsize = 12)
         
         # make sure axis is off
         plt.axis('off')
         plt.tight_layout()
         plt.pause(2) # pause for 2 seconds to show graph
-        plt.savefig(f"single_instance{self.step}.png")
         
         if self.step == len(self.statementsList):
             self.shutdown()
@@ -263,8 +284,14 @@ if __name__ == '__main__':
     # create a manager
     rm = ResourceAllocationGraph(3, 3)
     
-    # Setup deadlock scenario directly
-    rm.setupDeadlockScenario()
+    scenario = input("Enter scenario (1 = deadlock, 2 = noDeadlock): ")
+    if scenario == '1':
+        rm.scenarios("deadlock")
+    elif scenario == '2':
+        rm.scenarios("noDeadlock")
+    else:
+        print("Invalid scenario. Defaulting to deadlock scenario.")
+        rm.scenarios("deadlock")
     
-    # simulate the resource allocation graph
-    rm.simulate()
+    
+    rm.simulate() # simulate the resource allocation graph

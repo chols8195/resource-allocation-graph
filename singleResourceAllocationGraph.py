@@ -244,16 +244,16 @@ class ResourceAllocationGraph:
         # set positions of nodes and draw graph
         pos = nx.bipartite_layout(graph, nodes = processes, align = 'horizontal')
         
-        # Draw process nodes as circles
+        # draw process nodes as circles
         nx.draw_networkx_nodes(graph, pos, nodelist = processes, 
                                node_color = ['red' if i in self.deadlockedProcesses else 'blue' for i in processes], 
                                node_size = 600, alpha = 1, node_shape = 'o') # process nodes as circles
         
-        # Draw resource nodes as rectangles (squares)
+        # draw resource nodes as rectangles
         nx.draw_networkx_nodes(graph, pos, nodelist = resources, node_color = 'green', 
                                node_size = 700, alpha = 1, node_shape = 's') # resource nodes as squares
         
-        # Draw edges with different colors for request and claim
+        # draw edges with different colors for request and claim
         nx.draw_networkx_edges(graph, pos, edgelist = self.requestEdge, width = 1, alpha = 1, 
                                arrows = True, arrowstyle = '->', arrowsize = 20, edge_color = 'red')
         nx.draw_networkx_edges(graph, pos, edgelist = self.claimEdge, width = 1, alpha = 1, arrows = True,

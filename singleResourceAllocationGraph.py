@@ -245,19 +245,41 @@ class ResourceAllocationGraph:
         pos = nx.bipartite_layout(graph, nodes = processes, align = 'horizontal')
         
         # draw process nodes as circles
-        nx.draw_networkx_nodes(graph, pos, nodelist = processes, 
+        nx.draw_networkx_nodes(graph, pos, 
+                               nodelist = processes, 
                                node_color = ['red' if i in self.deadlockedProcesses else 'blue' for i in processes], 
-                               node_size = 600, alpha = 1, node_shape = 'o') # process nodes as circles
+                               node_size = 600, 
+                               alpha = 1, 
+                               node_shape = 'o') # process nodes as circles
         
         # draw resource nodes as rectangles
-        nx.draw_networkx_nodes(graph, pos, nodelist = resources, node_color = 'green', 
-                               node_size = 700, alpha = 1, node_shape = 's') # resource nodes as squares
+        nx.draw_networkx_nodes(graph, pos, 
+                               nodelist = resources, 
+                               node_color = 'green', 
+                               node_size = 700, 
+                               alpha = 1, 
+                               node_shape = 's') # resource nodes as squares
         
         # draw edges with different colors for request and claim
-        nx.draw_networkx_edges(graph, pos, edgelist = self.requestEdge, width = 1, alpha = 1, 
-                               arrows = True, arrowstyle = '->', arrowsize = 20, edge_color = 'red')
-        nx.draw_networkx_edges(graph, pos, edgelist = self.claimEdge, width = 1, alpha = 1, arrows = True,
-                               arrowstyle = '->', arrowsize = 20, edge_color = 'blue')
+        nx.draw_networkx_edges(graph, 
+                               pos, 
+                               edgelist = self.requestEdge, 
+                               width = 1, 
+                               alpha = 1, 
+                               arrows = True, 
+                               arrowstyle = '->', 
+                               arrowsize = 20, 
+                               edge_color = 'red')
+        
+        nx.draw_networkx_edges(graph, 
+                               pos, 
+                               edgelist = self.claimEdge, 
+                               width = 1, 
+                               alpha = 1, 
+                               arrows = True,
+                               arrowstyle = '->', 
+                               arrowsize = 20, 
+                               edge_color = 'blue')
         
         # draw labels
         nx.draw_networkx_labels(graph, pos, labels, font_size = 12, font_color = 'white')

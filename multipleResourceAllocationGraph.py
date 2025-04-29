@@ -4,7 +4,7 @@ import numpy as np
 
 class MultipleInstanceResourceManager:
     # resource allocation manager for multiple instance resources
-    # uses the banker's algorithm for deadlock detection
+    # uses resource allocation graph for deadlock detection
     def __init__(self, numProcesses, numResources, resourceInstance, statements = None):
         # initialize the instance variables
         self.step = 0
@@ -33,55 +33,58 @@ class MultipleInstanceResourceManager:
         # available resources: how many instances of each resource type are available
         self.availableResources = np.array(self.resourceInstance.copy(), dtype=int)
         
-        # max needs of each process (for banker's algorithm)
-        # will be updated as we process statements
+        # Keep track of resource allocation
+        # Not using banker's algorithm, just resource allocation graph
+        # Still maintain this for informational purposes
         self.maxNeeds = np.zeros((numProcesses, numResources), dtype=int)
         
         # keep track of deadlocked processes
-        self.deadlocked_processes = []
+        self.deadlockedProcesses = []
 
-    def add_statement(self, statement):
+    def addStatement(self, statement):
         # add a statement to the statement list
         self.statementsList.append(statement)
         
-    def set_predefined_scenario(self, scenario_type):
+    def scenario(self, scenarioType):
         # set up a predefined scenario
-        if scenario_type == "deadlock":
+        if scenarioType == "deadlock":
             # multiple instance with deadlock
             self.numberProcesses = 3
             self.numberResources = 2
             self.resourceInstance = [2, 2]
             self.statementsList = [
                 "p0 requests r0",
-                "p0 granted r0",
+                "p0 holds r0",
                 "p1 requests r0",
-                "p1 granted r0",
+                "p1 holds r0",
                 "p0 requests r1",
-                "p0 granted r1",
+                "p0 holds r1",
                 "p2 requests r1",
-                "p2 granted r1",
+                "p2 holds r1",
                 "p1 requests r1",
                 "p2 requests r0"
             ]
             
-        elif scenario_type == "nodeadlock":
+        elif scenarioType == "nodeadlock":
             # multiple instance with no deadlock
             self.numberProcesses = 3
             self.numberResources = 2
             self.resourceInstance = [2, 2]
             self.statementsList = [
                 "p0 requests r0",
-                "p0 granted r0",
+                "p0 holds r0",
                 "p1 requests r0",
-                "p1 granted r0",
+                "p1 holds r0",
                 "p0 requests r1",
-                "p0 granted r1",
+                "p0 holds r1",
                 "p0 releases r0",
                 "p2 requests r0",
-                "p2 granted r0",
+                "p2 holds r0",
                 "p1 releases r0",
                 "p2 requests r1",
-                "p2 granted r1"
+                "p2 holds r1",
+                "p1 requests r0",
+                "p1 holds r0"
             ]
         
         # reset matrices and edges
@@ -91,7 +94,7 @@ class MultipleInstanceResourceManager:
         self.maxNeeds = np.zeros((self.numberProcesses, self.numberResources), dtype=int)
         self.requestEdge = []
         self.claimEdge = []
-        self.deadlocked_processes = []
+        self.deadlockedProcesses = []
 
     def simulate(self):
         # run the simulation based on the statement list
@@ -114,40 +117,40 @@ class MultipleInstanceResourceManager:
             if self.system_deadlocked:
                 # if system is deadlocked then halt more drawing and parsing
                 self.step = len(self.statementsList)
-                self.shutdown_prompt()
+                self.shutdownPrompt()
                 break
 
             # parse statement into data structure
-            self.parse_statement()
+            self.parseStatement()
             
             # check for deadlock after each statement
             if self.detect_deadlock():
                 print("Deadlock detected!")
-                print(f"Deadlocked processes: {', '.join(f'p{i}' for i in self.deadlocked_processes)}")
-                if len(self.deadlocked_processes) == self.numberProcesses:
+                print(f"Deadlocked processes: {', '.join(f'p{i}' for i in self.deadlockedProcesses)}")
+                if len(self.deadlockedProcesses) == self.numberProcesses:
                     self.system_deadlocked = True
                     print("System completely deadlocked, halting program")
             
             # print matrix states
-            self.print_matrix_state()
+            self.print_matrixState()
             
             # show graph for each statement
             self.draw_graph()
 
-    def parse_statement(self):
+    def parseStatement(self):
         # parse a statement and update matrices accordingly
         statement = self.statementsList[self.step]
         print(f"\nStep {self.step + 1}: {statement}")
         
-        split_statement = statement.split(" ")
+        splitStatement = statement.split(" ")
         
         # split out statement into a usable format
-        processNum = int(split_statement[0][1])
-        action = split_statement[1]
-        resourceNum = int(split_statement[2][1])
+        processNum = int(splitStatement[0][1])
+        action = splitStatement[1]
+        resourceNum = int(splitStatement[2][1])
         
         # skip processing if the process is deadlocked
-        if processNum in self.deadlocked_processes:
+        if processNum in self.deadlockedProcesses:
             print(f"p{processNum} is deadlocked, ignoring statement '{statement}'")
             self.step += 1
             return
@@ -157,7 +160,8 @@ class MultipleInstanceResourceManager:
             # mark the request in the request matrix
             self.requestMatrix[processNum][resourceNum] += 1
             
-            # update.maxNeeds for banker's algorithm
+            # Just track maximum resources needed for informational purposes
+            # Not needed for resource allocation graph deadlock detection
             self.maxNeeds[processNum][resourceNum] = max(
                 self.maxNeeds[processNum][resourceNum],
                 self.matrixAlloc[processNum][resourceNum] + self.requestMatrix[processNum][resourceNum]
@@ -169,8 +173,8 @@ class MultipleInstanceResourceManager:
             if (processNum, resourceNum + self.numberProcesses) not in self.requestEdge:
                 self.requestEdge.append((processNum, resourceNum + self.numberProcesses))
             
-        elif action == "granted":
-            # resource is granted to the process
+        elif action == "holds":
+            # resource is holds to the process
             if self.requestMatrix[processNum][resourceNum] > 0:
                 # check if resource is available
                 if self.availableResources[resourceNum] > 0:
@@ -207,104 +211,79 @@ class MultipleInstanceResourceManager:
                 self.availableResources[resourceNum] += 1
                 
                 # for graph visualization, remove one ownership edge
-                edge_to_remove = (resourceNum + self.numberProcesses, processNum)
-                if edge_to_remove in self.claimEdge:
-                    self.claimEdge.remove(edge_to_remove)
+                edgeToRemove = (resourceNum + self.numberProcesses, processNum)
+                if edgeToRemove in self.claimEdge:
+                    self.claimEdge.remove(edgeToRemove)
                 
                 print(f"p{processNum} released r{resourceNum}, now holds {self.matrixAlloc[processNum][resourceNum]} instances")
                 
                 # check if any process is waiting for this resource
-                self.check_pending_requests(resourceNum)
+                self.checkPendingRequests(resourceNum)
             else:
                 print(f"Error: p{processNum} doesn't hold any instances of r{resourceNum}")
         
         # increment step counter
         self.step += 1
 
-    def check_pending_requests(self, resourceNum):
+    def checkPendingRequests(self, resourceNum):
         # check if any process is waiting for the released resource
         if self.availableResources[resourceNum] <= 0:
             return
             
         # find processes that requested this resource
         for i in range(self.numberProcesses):
-            if self.requestMatrix[i][resourceNum] > 0 and i not in self.deadlocked_processes:
+            if self.requestMatrix[i][resourceNum] > 0 and i not in self.deadlockedProcesses:
                 # grant the resource to this process
                 self.requestMatrix[i][resourceNum] -= 1
                 self.matrixAlloc[i][resourceNum] += 1
                 self.availableResources[resourceNum] -= 1
                 
                 # add ownership edge for visualization
-                self.claimEdge.append((resourceNum + self.numberProcesses, p))
+                self.claimEdge.append((resourceNum + self.numberProcesses, i))  # Fixed: 'p' to 'i'
                 
                 # if no more requests, remove request edge
                 if self.requestMatrix[i][resourceNum] == 0:
                     if (i, resourceNum + self.numberProcesses) in self.requestEdge:
                         self.requestEdge.remove((i, resourceNum + self.numberProcesses))
                 
-                print(f"p{i} was granted r{resourceNum} from waiting queue, now holds {self.matrixAlloc[i][resourceNum]} instances")
+                print(f"p{i} was granted r{resourceNum} from waiting queue, now holds {self.matrixAlloc[i][resourceNum]} instances")  # Fixed: "holds" to "granted"
                 
                 # only grant to one process (this can be modified if needed)
                 return
 
     def detect_deadlock(self):
-        # detect deadlock using banker's algorithm
-        # calculate need matrix (max - allocation)
-        need_matrix = self.maxNeeds - self.matrixAlloc
+        # Resource Allocation Graph (RAG) method for deadlock detection
+        # Create a directed graph
+        graph = nx.DiGraph()
         
-        # try to find a safe sequence
-        work = self.availableResources.copy()
-        finish = [False] * self.numberProcesses
-        safe_sequence = []
+        # Add nodes for processes and resources
+        processes = list(range(self.numberProcesses))
+        resources = list(range(self.numberProcesses, self.numberProcesses + self.numberResources))
+        graph.add_nodes_from(processes + resources)
         
-        # keep track of deadlocked processes
-        self.deadlocked_processes = []
+        # Add all edges (request edges and claim edges)
+        graph.add_edges_from(self.requestEdge + self.claimEdge)
         
-        # continue until no change or all processes are finished
-        while True:
-            found = False
-            for i in range(self.numberProcesses):
-                if not finish[i]:
-                    # check if process p's needs can be satisfied
-                    can_allocate = True
-                    for j in range(self.numberResources):
-                        if need_matrix[i][j] > work[j]:
-                            can_allocate = False
-                            break
+        # Check for cycles in the graph
+        # A cycle in a resource allocation graph indicates a deadlock
+        self.deadlockedProcesses = []
+        for cycle in nx.simple_cycles(graph):
+            for node in cycle:
+                # Only add process nodes to deadlocked processes list
+                if node < self.numberProcesses and node not in self.deadlockedProcesses:
+                    self.deadlockedProcesses.append(node)
                     
-                    if can_allocate:
-                        # process p can finish
-                        for j in range(self.numberResources):
-                            work[j] += self.matrixAlloc[i][j]
-                        finish[i] = True
-                        safe_sequence.append(i)
-                        found = True
-                        break
-            
-            if not found:
-                break
-        
-        # if any process couldn't finish, there's a deadlock
-        for i in range(self.numberProcesses):
-            if not finish[i]:
-                self.deadlocked_processes.append(i)
-        
-        if self.deadlocked_processes:
-            print("banker's algorithm found potential deadlock")
-            print(f"no safe sequence exists for processes: {', '.join(f'p{i}' for i in self.deadlocked_processes)}")
-        else:
-            print(f"system is in a safe state. safe sequence: {' -> '.join(f'p{i}' for i in safe_sequence)}")
-        
-        return len(self.deadlocked_processes) > 0
+        # Return True if there are deadlocked processes
+        return len(self.deadlockedProcesses) > 0
 
-    def print_matrix_state(self):
+    def print_matrixState(self):
         # print the current state of matrices
-        print("\nCurrent System State:")
-        print("Allocation Matrix (how many resources of each type are allocated to each process):")
+        print("\nCurrent State:")
+        print("Allocation Matrix:")
         print(self.matrixAlloc)
-        print("\nRequest Matrix (how many resources of each type are requested by each process):")
+        print("\nRequest Matrix:")
         print(self.requestMatrix)
-        print("\nMax Needs Matrix (maximum number of each resource type needed by each process):")
+        print("\nMax Needs Matrix:")
         print(self.maxNeeds)
         print("\nAvailable Resources:")
         print(self.availableResources)
@@ -322,69 +301,75 @@ class MultipleInstanceResourceManager:
         # create labels
         labels = {}
         for i in processes:
-            labels[i] = f'p{i}'
+            labels[i] = f'P{i}'
         for j in resources:
             resource_id = j - self.numberProcesses
             allocated = sum(self.matrixAlloc[:, resource_id])
             total = self.resourceInstance[resource_id]
             labels[j] = f'r{resource_id}\n({allocated}/{total})'
         
-        # add nodes
+        # add nodes and edges to the graph
         graph.add_nodes_from(processes + resources)
-        
-        # add edges
         graph.add_edges_from(self.requestEdge + self.claimEdge)
         
         # set fixed positions for nodes to prevent movement
         # create a fixed layout with processes on left, resources on right
-        pos = {}
-        process_spacing = 1.0 / (self.numberProcesses + 1)
-        resource_spacing = 1.0 / (self.numberResources + 1)
+        pos = nx.bipartite_layout(graph, nodes=processes + resources, align = 'horizontal')
+        processSpacing = 1.0 / (self.numberProcesses + 1)
+        resourceSpacing = 1.0 / (self.numberResources + 1)
         
         # position processes on the left side
         for i, p in enumerate(processes):
-            pos[i] = (0.25, (i + 1) * process_spacing)
+            pos[i] = (0.25, (i + 1) * processSpacing)
             
         # position resources on the right side
         for i, j in enumerate(resources):
-            pos[j] = (0.75, (i + 1) * resource_spacing)
+            pos[j] = (0.75, (i + 1) * resourceSpacing)
         
         # draw process nodes as circles
-        nx.draw_networkx_nodes(graph, pos,
-                              nodelist=processes,
-                              node_color=['red' if p in self.deadlocked_processes else 'blue' for i in processes],
-                              node_size=600,
-                              alpha=1,
-                              node_shape='o')
+        nx.draw_networkx_nodes(graph, 
+                               pos,
+                               nodelist=processes,
+                               node_color=['red' if p in self.deadlockedProcesses else 'blue' for p in processes],  # Fixed: 'i' to 'p'
+                               node_size=600,
+                               alpha=1,
+                               node_shape='o')
         
         # draw resource nodes as squares
-        nx.draw_networkx_nodes(graph, pos,
-                              nodelist=resources,
-                              node_color='green',
-                              node_size=700,
-                              alpha=1,
-                              node_shape='s')
+        nx.draw_networkx_nodes(graph, 
+                               pos,
+                               nodelist = resources,
+                               node_color = 'green',
+                               node_size = 700,
+                               alpha = 1,
+                               node_shape = 's')
         
         # draw request edges with straight lines
         nx.draw_networkx_edges(graph, pos,
-                              edgelist=self.requestEdge,
-                              width=1, alpha=1, arrows=True, 
-                              arrowstyle='->', arrowsize=20,
+                              edgelist = self.requestEdge,
+                              width=1, 
+                              alpha=1, 
+                              arrows=True, 
+                              arrowstyle = '->', 
+                              arrowsize=20,
                               edge_color='red')
         
         # draw ownership edges with straight lines
         nx.draw_networkx_edges(graph, pos,
-                              edgelist=self.claimEdge,
-                              width=1, alpha=1, arrows=True, 
-                              arrowstyle='->', arrowsize=20,
-                              edge_color='blue')
+                              edgelist = self.claimEdge,
+                              width = 1, 
+                              alpha = 1, 
+                              arrows = True, 
+                              arrowstyle = '->', 
+                              arrowsize = 20,
+                              edge_color = 'blue')
         
         # draw labels
         nx.draw_networkx_labels(graph, pos, labels, font_size=12, font_color='white')
         
         # set title based on deadlock status
-        if self.deadlocked_processes:
-            plt.title(f"Multiple Instance Resource Allocation Graph (Deadlocked Detected):\n {', '.join(f'p{i}' for i in self.deadlocked_processes)}", 
+        if self.deadlockedProcesses:
+            plt.title(f"Multiple Instance Resource Allocation Graph\nDeadlock Detected!", 
                      color='red', fontsize=12)
         else:
             plt.title(f"Multiple Instance Resource Allocation Graph", fontsize=12)
@@ -396,9 +381,9 @@ class MultipleInstanceResourceManager:
         
         # if this is the final step, prompt for shutdown
         if self.step == len(self.statementsList):
-            self.shutdown_prompt()
+            self.shutdownPrompt()
 
-    def shutdown_prompt(self):
+    def shutdownPrompt(self):
         # prompt for program shutdown
         input("Press enter to exit...")
 
@@ -408,14 +393,14 @@ if __name__ == '__main__':
     rm = MultipleInstanceResourceManager(3, 2, [2, 2])
     
     # choose a scenario
-    scenario = input("Choose a scenario (1 = deadlock, 2 = noDeadlock): ")
+    scenario = input("Enter scenario (1 = deadlock, 2 = nodeadlock): ")  # Fixed: "noDeadlock" to "nodeadlock"
     if scenario == '1':
-        rm.set_predefined_scenario("deadlock")
+        rm.scenario("deadlock")
     elif scenario == '2':
-        rm.set_predefined_scenario("noDeadlock")
+        rm.scenario("nodeadlock")  # Fixed: Match scenario name with input prompt
     else:
         print("Invalid scenario. Defaulting to deadlock scenario.")
-        rm.set_predefined_scenario("deadlock")
+        rm.scenario("deadlock")
     
     # run the simulation
     rm.simulate()

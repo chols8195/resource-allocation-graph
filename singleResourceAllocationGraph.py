@@ -2,6 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
+# print the matrices with labels to know what is the process and what is the resource
+def printLabels(matrix, rowPrefix="P", colPrefix="R"):
+    col_width = 4  # width of each column including spacing
+
+    # print header
+    header = " " * (col_width + 1) + "".join(f"{colPrefix}{j}".ljust(col_width) for j in range(matrix.shape[1]))
+    print(header)
+
+    # print rows
+    for i in range(matrix.shape[0]):
+        row_label = f"{rowPrefix}{i}".ljust(col_width)
+        row_values = "".join(str(matrix[i][j]).ljust(col_width) for j in range(matrix.shape[1]))
+        print(f"{row_label}| {row_values}")
+
 class ResourceAllocationGraph:
     def __init__(self, numProcesses, numResources, statements = None):
         # initialize the instance variables 
@@ -214,11 +228,11 @@ class ResourceAllocationGraph:
     
     def printState(self):
         print("\nCurrent State:")
-        print("Allocation Matrix:")
-        print(self.matrixAlloc)
-        print("Request Matrix:")
-        print(self.matrixRequest)
-        print("Available Resources (available = 1, allocated = 0):")
+        print("\nRequest Matrix:")
+        printLabels(self.matrixRequest)
+        print("\nAllocation Matrix:")
+        printLabels(self.matrixAlloc)
+        print("\nAvailable Resources (available = 1, allocated = 0):")
         print(self.availableResources)
         print("\n")
     
@@ -293,7 +307,7 @@ class ResourceAllocationGraph:
         # make sure axis is off
         plt.axis('off')
         plt.tight_layout()
-        plt.pause(2) # pause for 2 seconds to show graph
+        plt.pause(5) # pause for 5 seconds to show graph
         
         if self.step == len(self.statementsList):
             self.shutdown()

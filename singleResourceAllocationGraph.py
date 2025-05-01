@@ -17,6 +17,8 @@ def printLabels(matrix, rowPrefix="P", colPrefix="R"):
         print(f"{row_label}| {row_values}")
 
 class ResourceAllocationGraph:
+    # initialization:
+    # setup the system by initializing each variable and array 
     def __init__(self, numProcesses, numResources, statements = None):
         # initialize the instance variables 
         self.step = 0
@@ -38,11 +40,13 @@ class ResourceAllocationGraph:
         
         # keep track of deadlocked processes
         self.deadlockedProcesses = []
-        
+    
+    # adds statements to the simulation queue  
     def addStatement(self, statement):
-        # add to statement list
+        # add to statement list array 
         self.statementsList.append(statement)
-        
+      
+    # setup the simulation scenarios with setup values and sequence of actions
     def scenarios(self, scenarioType):
         if scenarioType == "deadlock":
             # deadlock scenario
@@ -89,7 +93,10 @@ class ResourceAllocationGraph:
         self.requestEdge = []
         self.deadlockedProcesses = []
     
-    # simulate the resource allocation graph based on statement list    
+    # simulation process: 
+    
+    # simulate the resource allocation graph based on statement list   
+    # calls parseStatement() to handle action in current statement, calls detectDeadlocks() to check for deadlocks, prints matrices, and visualize the current graph
     def simulate(self):
         # use matplotlib to create a graph
         plt.rcParams['toolbar'] = 'None' # remove toolbar
@@ -126,7 +133,8 @@ class ResourceAllocationGraph:
             self.printState()
             self.drawGraph()
     
-    # parse a statement and update data structure        
+    # parse a statement and update data structure   
+    # parse current statement and update the request or allocation matrix and add or removes edges from graph     
     def parseStatement(self):
         statement = self.statementsList[self.step]
         print(f"\nStep {self.step + 1}: {statement}")
@@ -183,7 +191,7 @@ class ResourceAllocationGraph:
                 print(f"P{processNum} released R{resourceNum}")
                 
                 # check if any process is waiting for a resource
-                self.checkWaitingProcesses(resourceNum)
+                self.checkPendingRequests(resourceNum)
             
             else:
                 print(f"P{processNum} is not holding R{resourceNum}")
@@ -191,7 +199,8 @@ class ResourceAllocationGraph:
         # increment step 
         self.step += 1
         
-    def checkWaitingProcesses(self, resourceNum):
+    # checks if any waiting process can be granted a released resource
+    def checkPendingRequests(self, resourceNum):
         # check for any process that is waiting for the resource
         for i in range(self.numberProcesses):
             if self.matrixRequest[i][resourceNum] == 1 and i not in self.deadlockedProcesses:
@@ -207,6 +216,7 @@ class ResourceAllocationGraph:
                 print(f"P{i} allocated to R{resourceNum}")
                 return # one process is allocated the resource
     
+    # use NetworkX to check for cycles and update if there is a deadlock. 
     def detectDeadlock(self):
         # detect deadlock using cycle detection algorithm
         graph = nx.DiGraph()
@@ -307,7 +317,7 @@ class ResourceAllocationGraph:
         # make sure axis is off
         plt.axis('off')
         plt.tight_layout()
-        plt.pause(5) # pause for 5 seconds to show graph
+        plt.pause(1) # pause for 5 seconds to show graph
         
         if self.step == len(self.statementsList):
             self.shutdown()

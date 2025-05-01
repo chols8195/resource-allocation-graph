@@ -4,17 +4,40 @@ import numpy as np
 
 # print the matrices with labels to know what is the process and what is the resource
 def printLabels(matrix, rowPrefix="P", colPrefix="R"):
-    col_width = 4  # width of each column including spacing
-
-    # print header
-    header = " " * (col_width + 1) + "".join(f"{colPrefix}{j}".ljust(col_width) for j in range(matrix.shape[1]))
+    # Fixed column width to ensure consistent spacing
+    col_width = 3
+    
+    # Calculate table dimensions
+    num_rows = matrix.shape[0]
+    num_cols = matrix.shape[1]
+    
+    # Calculate width of the entire table
+    table_width = 7 + (num_cols * (col_width + 1))
+    
+    # Create top border
+    print("+" + "-" * (table_width - 2) + "+")
+    
+    # Create header row with resource labels
+    header = "|     "
+    for j in range(num_cols):
+        header += f" {colPrefix}{j} "
+    header += "|"
     print(header)
-
-    # print rows
-    for i in range(matrix.shape[0]):
-        row_label = f"{rowPrefix}{i}".ljust(col_width)
-        row_values = "".join(str(matrix[i][j]).ljust(col_width) for j in range(matrix.shape[1]))
-        print(f"{row_label}| {row_values}")
+    
+    # Create separator line
+    print("+" + "-" * (table_width - 2) + "+")
+    
+    # Create rows with process labels and values
+    for i in range(num_rows):
+        row = f"| {rowPrefix}{i}  |"
+        for j in range(num_cols):
+            row += f" {matrix[i][j]} " + " "
+        # Remove the last extra space and add the closing border
+        row = row[:-1] + "|"
+        print(row)
+    
+    # Create bottom border
+    print("+" + "-" * (table_width - 2) + "+")
         
 class MultipleInstanceResourceManager:
     # resource allocation manager for multiple instance resources
@@ -56,40 +79,43 @@ class MultipleInstanceResourceManager:
             self.numberResources = 3
             self.resourceInstance = [2, 2, 2]
             self.statementsList = [
-                "p0 requests r0",
-                "p0 holds r0",
-                "p1 requests r0",
-                "p1 holds r0",
-                "p0 requests r1",
-                "p0 holds r1",
-                "p2 requests r1",
-                "p2 holds r1",
-                "p1 requests r2",
-                "p1 holds r2",
-                "p2 requests r0",
-                "p0 requests r2"  
+                "P0 requests R0",
+                "P0 holds R0",
+                "P1 requests R0",
+                "P1 holds R0",
+                "P2 requests R2",
+                "P2 holds R2",
+                "P0 requests R1",
+                "P0 holds R1",
+                "P2 requests R1",
+                "P2 holds R1",
+                "P1 requests R2",
+                "P1 holds R2",
+                "P0 requests R2",
+                "P2 requests R0",
+                "P1 requests R1"
             ]
             
-        elif scenarioType == "nodeadlock":
+        elif scenarioType == "noDeadlock":
         # multiple instance with no deadlock
             self.numberProcesses = 3
             self.numberResources = 3
             self.resourceInstance = [2, 2, 2]
             self.statementsList = [
-                "p0 requests r0",
-                "p0 holds r0",
-                "p1 requests r0",
-                "p1 holds r0",
-                "p0 requests r1",
-                "p0 holds r1",
-                "p0 releases r0",
-                "p2 requests r0",
-                "p2 holds r0",
-                "p1 releases r0",
-                "p2 requests r2",
-                "p2 holds r2",
-                "p1 requests r2",
-                "p1 holds r2"
+                "P0 requests R0",
+                "P0 holds R0",
+                "P1 requests R0",
+                "P1 holds R0",
+                "P0 requests R1",
+                "P0 holds R1",
+                "P0 releases R0",
+                "P2 requests R0",
+                "P2 holds R0",
+                "P1 releases R0",
+                "P2 requests R2",
+                "P2 holds R2",
+                "P1 requests R2",
+                "P1 holds R2"
             ]
         
         # reset matrices and edges
@@ -189,11 +215,11 @@ class MultipleInstanceResourceManager:
                         if (processNum, resourceNum + self.numberProcesses) in self.requestEdge:
                             self.requestEdge.remove((processNum, resourceNum + self.numberProcesses))
                     
-                    print(f"p{processNum} now holds {self.matrixAlloc[processNum][resourceNum]} instances of r{resourceNum}")
+                    print(f"p{processNum} now holds {self.matrixAlloc[processNum][resourceNum]} instances of R{resourceNum}")
                 else:
-                    print(f"Error: No available instances of r{resourceNum}")
+                    print(f"Error: No available instances of R{resourceNum}")
             else:
-                print(f"Error: p{processNum} didn't request r{resourceNum}")
+                print(f"Error: p{processNum} didn't request R{resourceNum}")
         
         elif action == "releases":
             # process releases a resource
@@ -209,12 +235,12 @@ class MultipleInstanceResourceManager:
                 if edgeToRemove in self.claimEdge:
                     self.claimEdge.remove(edgeToRemove)
                 
-                print(f"p{processNum} released r{resourceNum}, now holds {self.matrixAlloc[processNum][resourceNum]} instances")
+                print(f"P{processNum} released R{resourceNum}, now holds {self.matrixAlloc[processNum][resourceNum]} instances")
                 
                 # check if any process is waiting for this resource
                 self.checkPendingRequests(resourceNum)
             else:
-                print(f"Error: p{processNum} doesn't hold any instances of r{resourceNum}")
+                print(f"Error: p{processNum} doesn't hold any instances of R{resourceNum}")
         
         # increment step counter
         self.step += 1
@@ -257,8 +283,8 @@ class MultipleInstanceResourceManager:
         # Add all edges (request edges and claim edges)
         graph.add_edges_from(self.requestEdge + self.claimEdge)
         
-        # Check for cycles in the graph
-        # A cycle in a resource allocation graph indicates a deadlock
+        # check for cycles in the graph
+        # a cycle in a resource allocation graph indicates a deadlock
         self.deadlockedProcesses = []
         for cycle in nx.simple_cycles(graph):
             for node in cycle:
@@ -297,7 +323,7 @@ class MultipleInstanceResourceManager:
             resource_id = j - self.numberProcesses
             allocated = sum(self.matrixAlloc[:, resource_id])
             total = self.resourceInstance[resource_id]
-            labels[j] = f'r{resource_id}\n({allocated}/{total})'
+            labels[j] = f'R{resource_id}\n({allocated}/{total})'
         
         # add nodes and edges to the graph
         graph.add_nodes_from(processes + resources)
@@ -364,11 +390,19 @@ class MultipleInstanceResourceManager:
                      color='red', fontsize=12)
         else:
             plt.title(f"Multiple Instance Resource Allocation Graph", fontsize=12)
+        # set title based on deadlock status
+        if self.deadlockedProcesses:
+            if len(self.deadlockedProcesses) == self.numberProcesses:
+                plt.title(f"Multiple Instance Resource Allocation Graph\nDeadlock Detected!", 
+                     color='red', fontsize=12)
+        else:
+            plt.title("Multiple Instance Resource Allocation Graph", fontsize=12)
+
         
         # make sure axis stays gone
         plt.axis("off")
         plt.tight_layout()
-        plt.pause(5)
+        plt.pause(1)
         
         # if this is the final step, prompt for shutdown
         if self.step == len(self.statementsList):
@@ -381,10 +415,10 @@ class MultipleInstanceResourceManager:
 # example usage
 if __name__ == '__main__':
     # create a manager
-    rm = MultipleInstanceResourceManager(3, 2, [2, 2])
+    rm = MultipleInstanceResourceManager(3, 2, [2, 2, 2])
     
     # choose a scenario
-    scenario = input("Enter scenario (1 = deadlock, 2 = noDeadlock): ")  # Fixed: "noDeadlock" to "nodeadlock"
+    scenario = input("Enter scenario (1 = deadlock, 2 = noDeadlock): ") 
     if scenario == '1':
         rm.scenario("deadlock")
     elif scenario == '2':

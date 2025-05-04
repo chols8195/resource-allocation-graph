@@ -402,7 +402,6 @@ class MultipleInstanceResourceManager:
         plt.axis("off")
         plt.tight_layout()
         plt.pause(1)
-        plt.savefig(f"{self.step + 1}.png")
         
         # if this is the final step, prompt for shutdown
         if self.step == len(self.statementsList):

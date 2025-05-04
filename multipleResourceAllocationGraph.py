@@ -4,39 +4,39 @@ import numpy as np
 
 # print the matrices with labels to know what is the process and what is the resource
 def printLabels(matrix, rowPrefix="P", colPrefix="R"):
-    # Fixed column width to ensure consistent spacing
+    # fixed column width to ensure consistent spacing
     col_width = 3
     
-    # Calculate table dimensions
+    # calculate table dimensions
     num_rows = matrix.shape[0]
     num_cols = matrix.shape[1]
     
-    # Calculate width of the entire table
+    # calculate width of the entire table
     table_width = 7 + (num_cols * (col_width + 1))
     
-    # Create top border
+    # create top border
     print("+" + "-" * (table_width - 2) + "+")
     
-    # Create header row with resource labels
+    # create header row with resource labels
     header = "|     "
     for j in range(num_cols):
         header += f" {colPrefix}{j} "
     header += "|"
     print(header)
     
-    # Create separator line
+    # create separator line
     print("+" + "-" * (table_width - 2) + "+")
     
-    # Create rows with process labels and values
+    # create rows with process labels and values
     for i in range(num_rows):
         row = f"| {rowPrefix}{i}  |"
         for j in range(num_cols):
             row += f" {matrix[i][j]} " + " "
-        # Remove the last extra space and add the closing border
+        # remove the last extra space and add the closing border
         row = row[:-1] + "|"
         print(row)
     
-    # Create bottom border
+    # create bottom border
     print("+" + "-" * (table_width - 2) + "+")
         
 class MultipleInstanceResourceManager:
@@ -116,6 +116,12 @@ class MultipleInstanceResourceManager:
                 "P2 holds R2",
                 "P1 requests R2",
                 "P1 holds R2"
+                "P1 requests R1",
+                "P1 holds R1", 
+                "P0 requests R0",
+                "P0 holds R0", 
+                "P1 requests R1", 
+                "P1 holds R1"
             ]
         
         # reset matrices and edges
@@ -164,7 +170,7 @@ class MultipleInstanceResourceManager:
             self.printMatrixState()
             
             # show graph for each statement
-            self.drawgraph()
+            self.drawGraph()
 
     def parseStatement(self):
         # parse a statement and update matrices accordingly
@@ -304,9 +310,8 @@ class MultipleInstanceResourceManager:
         printLabels(self.requestMatrix)
         print("\nAvailable Resources:")
         print(self.availableResources)
-        print("\n")
 
-    def drawgraph(self):
+    def drawGraph(self):
         # draw the resource allocation graph using networkx
         plt.clf()
         graph = nx.DiGraph()
@@ -383,26 +388,21 @@ class MultipleInstanceResourceManager:
         
         # draw labels
         nx.draw_networkx_labels(graph, pos, labels, font_size=12, font_color='white')
-        
-        # set title based on deadlock status
-        if self.deadlockedProcesses:
-            plt.title(f"Multiple Instance Resource Allocation Graph\nDeadlock Detected!", 
-                     color='red', fontsize=12)
-        else:
-            plt.title(f"Multiple Instance Resource Allocation Graph", fontsize=12)
+
         # set title based on deadlock status
         if self.deadlockedProcesses:
             if len(self.deadlockedProcesses) == self.numberProcesses:
                 plt.title(f"Multiple Instance Resource Allocation Graph\nDeadlock Detected!", 
                      color='red', fontsize=12)
         else:
-            plt.title("Multiple Instance Resource Allocation Graph", fontsize=12)
+            plt.title("Multiple Instance Resource Allocation Graph (No Deadlock Detected)", fontsize=12)
 
         
         # make sure axis stays gone
         plt.axis("off")
         plt.tight_layout()
         plt.pause(1)
+        plt.savefig(f"{self.step + 1}.png")
         
         # if this is the final step, prompt for shutdown
         if self.step == len(self.statementsList):

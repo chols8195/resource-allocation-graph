@@ -4,17 +4,40 @@ import networkx as nx
 
 # print the matrices with labels to know what is the process and what is the resource
 def printLabels(matrix, rowPrefix="P", colPrefix="R"):
-    col_width = 4  # width of each column including spacing
-
-    # print header
-    header = " " * (col_width + 1) + "".join(f"{colPrefix}{j}".ljust(col_width) for j in range(matrix.shape[1]))
+    # fixed column width to ensure consistent spacing
+    col_width = 3
+    
+    # calculate table dimensions
+    num_rows = matrix.shape[0]
+    num_cols = matrix.shape[1]
+    
+    # calculate width of the entire table
+    table_width = 7 + (num_cols * (col_width + 1))
+    
+    # create top border
+    print("+" + "-" * (table_width - 2) + "+")
+    
+    # create header row with resource labels
+    header = "|     "
+    for j in range(num_cols):
+        header += f" {colPrefix}{j} "
+    header += "|"
     print(header)
-
-    # print rows
-    for i in range(matrix.shape[0]):
-        row_label = f"{rowPrefix}{i}".ljust(col_width)
-        row_values = "".join(str(matrix[i][j]).ljust(col_width) for j in range(matrix.shape[1]))
-        print(f"{row_label}| {row_values}")
+    
+    # create separator line
+    print("+" + "-" * (table_width - 2) + "+")
+    
+    # create rows with process labels and values
+    for i in range(num_rows):
+        row = f"| {rowPrefix}{i}  |"
+        for j in range(num_cols):
+            row += f" {matrix[i][j]} " + " "
+        # remove the last extra space and add the closing border
+        row = row[:-1] + "|"
+        print(row)
+    
+    # create bottom border
+    print("+" + "-" * (table_width - 2) + "+")
 
 class ResourceAllocationGraph:
     # initialization:
@@ -237,14 +260,13 @@ class ResourceAllocationGraph:
         return len(self.deadlockedProcesses) > 0 # return true if deadlock is detected
     
     def printState(self):
-        print("\nCurrent State:")
+        print("Current State:")
         print("\nRequest Matrix:")
         printLabels(self.matrixRequest)
         print("\nAllocation Matrix:")
         printLabels(self.matrixAlloc)
         print("\nAvailable Resources (available = 1, allocated = 0):")
         print(self.availableResources)
-        print("\n")
     
     def drawGraph(self):
         plt.clf() # clear the figure
@@ -317,7 +339,7 @@ class ResourceAllocationGraph:
         # make sure axis is off
         plt.axis('off')
         plt.tight_layout()
-        plt.pause(1) # pause for 5 seconds to show graph
+        plt.pause(1)
         
         if self.step == len(self.statementsList):
             self.shutdown()
